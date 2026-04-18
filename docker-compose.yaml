@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  frontend:
+      image: frontend:v1
+      ports:
+        - "80:80"
+      networks:
+        - mynetwork
+      environment:
+        - NODE_SERVICE_URL=http://node:3001
+        - PYTHON_SERVICE_URL=http://python:3002
+        - JAVA_SERVICE_URL=http://java:3003
+      depends_on:
+        - node
+        - python
+        - java
+
+  java:
+    image: java:v1
+    ports:
+      - "3003:3003"
+    networks:
+        - mynetwork
+    environment:
+      - SERVER_PORT=3003
+      - SPRING_DATA_MONGODB_URI=mongodb://mongo:27017/orderdb
+      - NODE_SERVICE_URL=http://node:3001
+      - PYTHON_SERVICE_URL=http://python:3002
+    depends_on:
+      - mongo
+
+  node:
+    image: node:v1
+    ports:
+      - "3001:3001"
+    networks:
+        - mynetwork
+    environment:
+      - PORT=3001
+      - MONGO_URI=mongodb://mongo:27017/userdb
+      - PYTHON_SERVICE_URL=http://python:3002
+      - JAVA_SERVICE_URL=http://java:3003
+    depends_on:
+      - mongo
+
+  python:
+    image: python:v1
+    ports:
+      - "3002:3002"
+    networks:
+        - mynetwork
+    environment:
+      - PORT=3002
+      - MONGO_URI=mongodb://mongo:27017/productdb
+      - NODE_SERVICE_URL=http://node:3001
+      - JAVA_SERVICE_URL=http://java:3003
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    networks:
+        - mynetwork
+    volumes:
+      - ./database/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+      - ./database/init-db.js:/docker-entrypoint-initdb.d/init-db.js:ro
+      - ./data/db:/data/db
+    entrypoint: ["/bin/bash", "-c", "/docker-entrypoint-initdb.d/init.sh && docker-entrypoint.sh mongod"]
+
+networks:
+  mynetwork:
+    driver: bridge
+volumes:
+  dbdata:
+
+
